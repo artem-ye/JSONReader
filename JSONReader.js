@@ -3,6 +3,18 @@
 const { Transform } = require('node:stream');
 const { createBodyParser } = require('./src/bodyParser.js');
 
+const jsonParse = (data) => {
+  const parse = (resolve, reject) => {
+    try {
+      JSON.parse(data);
+      resolve(data);
+    } catch (err) {
+      reject(err);
+    }
+  };
+  return new Promise(parse);
+};
+
 class JsonParser extends Transform {
   #jsonBodyParser = null;
   #handler = null;
@@ -36,9 +48,18 @@ class JsonParser extends Transform {
   }
 
   #parseHandler(data, encoding, callback) {
-    // TODO: add error handle, make JSON.parse async
-    const onData = (error, data) => void this.push(JSON.parse(data));
-    this.#jsonBodyParser.feed(data.toString(), onData, callback);
+    // TODO: cleanup code
+    const _push = this.push.bind(this);
+    const promises = [];
+    const parseAsync = (data) =>
+      void promises.push(jsonParse(data).then(_push));
+    const onData = (err, data) => parseAsync(data);
+    const onDone = () =>
+      Promise.all(promises).then(
+        () => callback(),
+        (err) => callback(err)
+      );
+    this.#jsonBodyParser.feed(data.toString(), onData, onDone);
   }
 
   _transform(data, encoding, callback) {
