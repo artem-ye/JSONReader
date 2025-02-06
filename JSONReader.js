@@ -1,7 +1,7 @@
 'use strict';
 
 const { Transform } = require('node:stream');
-const { createBodyParser } = require('./bodyParser.js');
+const { createBodyParser } = require('./src/bodyParser.js');
 
 class JsonParser extends Transform {
   #jsonBodyParser = null;
