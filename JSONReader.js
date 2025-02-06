@@ -12,7 +12,8 @@ const jsonParse = (data) => {
       reject(err);
     }
   };
-  return new Promise(parse);
+  const parseAsync = (resolve, reject) => setTimeout(parse, 0, resolve, reject);
+  return new Promise(parseAsync);
 };
 
 class JsonParser extends Transform {
@@ -37,7 +38,7 @@ class JsonParser extends Transform {
       '{': () => next(this.#passThroughHandler, data),
     };
     const next = (handler, data) => {
-      this.#handler = handler.bind(this);
+      this.#handler = handler;
       this.#handler(data, encoding, callback);
     };
     match in handlers ? handlers[match]() : callback();
@@ -48,17 +49,12 @@ class JsonParser extends Transform {
   }
 
   #parseHandler(data, encoding, callback) {
-    // TODO: cleanup code
-    const _push = this.push.bind(this);
     const promises = [];
-    const parseAsync = (data) =>
-      void promises.push(jsonParse(data).then(_push));
+    const _push = this.push.bind(this);
+    const parseAsync = (data) => promises.push(jsonParse(data).then(_push));
+
     const onData = (err, data) => parseAsync(data);
-    const onDone = () =>
-      Promise.all(promises).then(
-        () => callback(),
-        (err) => callback(err)
-      );
+    const onDone = () => Promise.all(promises).then(() => callback(), callback);
     this.#jsonBodyParser.feed(data.toString(), onData, onDone);
   }
 
@@ -86,15 +82,23 @@ class JsonParser extends Transform {
 
 const mainAsync = async () => {
   const stream = new JsonParser({ objectMode: true });
+  stream.on('error', () => {
+    console.log('Oops');
+  });
   stream.write('[{"a": 1},');
   stream.write('{"b": 21}, {"c": 22}');
   stream.write('"f": [\\{"x": 0\\}], {"d": 31}');
   stream.write(', {"e" ');
   stream.write(': 41},  {');
   stream.write('"f": 41},  {"g": 51} ');
-  for await (const data of stream) {
-    console.log('await', { data });
-  }
+
+  const iterate = async () => {
+    for await (const data of stream) {
+      console.log('await', { data });
+    }
+  };
+
+  iterate().catch((e) => console.log('Eah!!!', e.message));
 };
 
-mainAsync();
+mainAsync(); //.catch((err) => console.log('ERR', err.message));
