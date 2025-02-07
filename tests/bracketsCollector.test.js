@@ -3,15 +3,17 @@ const { it, describe } = require('node:test');
 const { createBracketsCollector } = require('../src/bracketsCollector.js');
 
 describe('Brackets collector common tests', () => {
-  const collector = createBracketsCollector();
-  const doneState = () => collector.state().isDone;
+  const collector = createBracketsCollector({
+    openBracket: '{',
+    closeBracket: '}',
+  });
+  const doneState = () => collector.done;
   const countState = () => collector.state().count;
 
   it('interface', () => {
     assert.strictEqual(typeof createBracketsCollector === 'function', true);
     assert.strictEqual(typeof collector === 'object', true);
     assert.ok(collector.collect);
-    assert.ok(collector.isDone);
     assert.ok(collector.state);
   });
 
@@ -46,5 +48,20 @@ describe('Brackets collector common tests', () => {
     collector.reset();
     assert.equal(doneState(), false);
     assert.strictEqual(countState(), 0);
+  });
+
+  it('error', () => {
+    collector.reset();
+    collector.collect('{');
+    assert.strictEqual(collector.done, false);
+    assert.strictEqual(collector.errored, false);
+
+    collector.collect('}');
+    assert.strictEqual(collector.done, true);
+    assert.strictEqual(collector.errored, false);
+
+    collector.collect('}');
+    assert.strictEqual(collector.done, true);
+    assert.strictEqual(collector.errored, true);
   });
 });

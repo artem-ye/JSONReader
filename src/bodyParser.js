@@ -34,18 +34,18 @@ const machine = ({ openBracket, closeBracket }) => {
       }
     },
     collect: () => {
-      const lastIndex = parser.findCloseTag(chunk, chunkOffset);
+      const { lastIndex, error } = parser.findCloseTag(chunk, chunkOffset);
       if (lastIndex === undefined) {
         buffer += chunk.slice(chunkOffset);
         states.endOfChunk();
       } else {
         buffer += chunk.slice(chunkOffset, lastIndex);
         chunkOffset = lastIndex;
-        states.collected();
+        states.collected(error);
       }
     },
-    collected: () => {
-      onData(null, buffer);
+    collected: (error) => {
+      onData(error, buffer);
       buffer = '';
       setState(states.inspect);
       next();

@@ -32,11 +32,17 @@ const createSearchEngine = ({ openBracket, closeBracket }) => {
     const re = withLastIndex(bracketRe, offset);
     let res = null;
     let lastIndex = undefined;
+    let error = null;
     while (isNaN(lastIndex) && (res = re.exec(chunk))) {
       bracketsCounter.collect(res[0]);
-      if (bracketsCounter.isDone()) lastIndex = re.lastIndex;
+      if (bracketsCounter.done) {
+        lastIndex = re.lastIndex;
+        if (bracketsCounter.errored) {
+          error = new Error('Inconsistent brackets count');
+        }
+      }
     }
-    return lastIndex;
+    return { lastIndex, error };
   };
 
   return {

@@ -1,31 +1,45 @@
 'use strict';
 
-const DEFAULTS = {
-  openBracket: '{',
-  closeBracket: '}',
+const createCounter = (cb) => {
+  let value = 0;
+  const _interface = {
+    get value() {
+      return value;
+    },
+    reset: () => void (value = 0),
+    inc: () => void value++,
+    dec: () => {
+      if (--value < 1) cb(value < 0);
+    },
+  };
+  return _interface;
 };
 
-const createBracketsCollector = ({ openBracket, closeBracket } = DEFAULTS) => {
-  let count = 0;
-  let isDone = false;
+const createBracketsCollector = ({ openBracket, closeBracket }) => {
+  let done = false;
+  let error = false;
   let state = null;
   const setState = (newState) => void (state = newState);
+
+  const counter = createCounter((err) => end(err));
   const processor = {
-    [openBracket]: () => void ++count,
-    [closeBracket]: () => void (--count === 0 && done()),
+    [openBracket]: () => counter.inc(),
+    [closeBracket]: () => counter.dec(),
   };
 
-  const feed = (chunk) => state(chunk);
+  const collect = (chunk) => state(chunk);
+
+  const end = (isError) => {
+    done = true;
+    error = isError;
+    setState(resetState);
+  };
 
   const reset = () => {
-    isDone = false;
-    count = 0;
+    done = false;
+    error = false;
+    counter.reset();
     setState(collectState);
-  };
-
-  const done = () => {
-    isDone = true;
-    setState(resetState);
   };
 
   const collectState = (chunk) => {
@@ -38,11 +52,13 @@ const createBracketsCollector = ({ openBracket, closeBracket } = DEFAULTS) => {
   };
 
   state = collectState;
+  // prettier-ignore
   return {
-    collect: feed,
+    collect,
     reset,
-    isDone: () => isDone,
-    state: () => ({ isDone, count }),
+    get errored() { return error; },
+    get done() { return done; },
+    state: () => ({ done: done, errored: error, count: counter.value }),
   };
 };
 

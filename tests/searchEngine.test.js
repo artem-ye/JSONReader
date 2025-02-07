@@ -10,7 +10,7 @@ describe('Search engine: Use cases', () => {
     let res = engine.findOpenTag(jsonStr, 0);
     assert.strictEqual(res.lastIndex, 2);
 
-    const lastIndex = engine.findCloseTag(jsonStr, 2);
+    const { lastIndex } = engine.findCloseTag(jsonStr, 2);
     assert.strictEqual(lastIndex, jsonStr.length);
   });
 
@@ -26,9 +26,9 @@ describe('Search engine: Use cases', () => {
     assert.strictEqual(res.lastIndex, offset + 1);
 
     const startIndex = res.lastIndex - 1;
-    const endIndex = engine.findCloseTag(jsonStr, res.lastIndex);
-    console.log(endIndex);
-    assert.strictEqual(endIndex > startIndex + 1, true);
+    const { lastIndex } = engine.findCloseTag(jsonStr, res.lastIndex);
+    console.log(lastIndex);
+    assert.strictEqual(lastIndex > startIndex + 1, true);
   });
 });
 
@@ -57,10 +57,10 @@ describe('Search engine: Unit test', () => {
     assert.strictEqual(res.lastIndex, 2);
 
     res = engine.findCloseTag('"a": "\\}"', 0);
-    assert.strictEqual(res, undefined);
+    assert.strictEqual(res.lastIndex, undefined);
 
     const s = '"a": 12}';
-    const lastIndex = engine.findCloseTag(s, 2);
+    const { lastIndex } = engine.findCloseTag(s, 2);
     assert.strictEqual(lastIndex, s.length);
   });
 });
