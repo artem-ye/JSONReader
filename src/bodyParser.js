@@ -54,11 +54,17 @@ const machine = ({ openBracket, closeBracket }) => {
       onDone();
       setCallBacks(null, null);
     },
+    reset: () => {
+      this.buffer = '';
+      setCallBacks(null, null);
+      parser.reset();
+    },
   };
 
   state = states.inspect;
   return {
     feed: states.newChunk,
+    reset: states.reset,
   };
 };
 
