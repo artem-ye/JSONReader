@@ -16,10 +16,8 @@ class JsonParser extends Transform {
     this.#state(data, encoding, callback);
   }
 
-  _flush(done) {
-    const onData = (error, data) => (error ? done(error) : this.push(data));
-    this.#parser.end(onData, done);
-    this.#setState(this.#inspectState);
+  _flush(callback) {
+    this.#end(callback);
   }
 
   #setState(state) {
@@ -44,6 +42,12 @@ class JsonParser extends Transform {
   #parseState(data, encoding, done) {
     const onData = (err, data) => void (err ? done(err) : this.push(data));
     this.#parser.feed(data.toString(), onData, done);
+  }
+
+  #end(callback) {
+    const onData = (error, data) => (error ? callback(error) : this.push(data));
+    this.#parser.end(onData, callback);
+    this.#setState(this.#inspectState);
   }
 }
 
