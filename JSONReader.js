@@ -24,10 +24,10 @@ class JsonParser extends Transform {
     this.#state = state;
   }
 
-  #inspectState(data, encoding, callback) {
+  #inspectState(chunk, encoding, callback) {
     const mode = {
-      '[': () => mode._use(ParseMode.Chunked, data.slice(index + 1)),
-      '{': () => mode._use(ParseMode.Accumulative, data),
+      '[': () => mode._use(ParseMode.Chunked, chunk.slice(index + 1)),
+      '{': () => mode._use(ParseMode.Accumulative, chunk),
       _use: (Parser, data) => {
         this.#parser = new Parser();
         this.#setState(this.#parseState);
@@ -35,13 +35,13 @@ class JsonParser extends Transform {
       },
     };
 
-    const { 0: match, index } = data.match(/[\\[\\{]/) || {};
+    const { 0: match, index } = chunk.match(/[\\[\\{]/) || {};
     match in mode ? mode[match]() : callback(new Error('Wrong JSON data'));
   }
 
-  #parseState(data, encoding, done) {
-    const onData = (err, data) => void (err ? done(err) : this.push(data));
-    this.#parser.feed(data.toString(), onData, done);
+  #parseState(chunk, encoding, done) {
+    const onData = (result) => void this.push(result);
+    this.#parser.feed(chunk, onData, done);
   }
 
   #end(callback) {
