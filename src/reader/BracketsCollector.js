@@ -15,7 +15,7 @@ const createCounter = (cb) => {
   return _interface;
 };
 
-const createBracketsCollector = ({ openBracket, closeBracket }) => {
+const BracketsCollector = ({ openBracket, closeBracket }) => {
   let done = false;
   let error = false;
   let state = null;
@@ -62,4 +62,4 @@ const createBracketsCollector = ({ openBracket, closeBracket }) => {
   };
 };
 
-module.exports = { createBracketsCollector };
+module.exports = { BracketsCollector: BracketsCollector };

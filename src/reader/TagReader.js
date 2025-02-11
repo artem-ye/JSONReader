@@ -1,8 +1,8 @@
 'use strict';
 
-const { createSearchEngine } = require('./searchEngine.js');
+const { SearchEngine } = require('./SearchEngine.js');
 
-const machine = ({ openBracket, closeBracket }) => {
+const TagReader = ({ openBracket, closeBracket }) => {
   let chunk = '';
   let chunkOffset = 0;
   let buffer = '';
@@ -13,7 +13,7 @@ const machine = ({ openBracket, closeBracket }) => {
   const next = () => state();
   const setCallBacks = (data, done) => void ((onDone = done), (onData = data));
 
-  const parser = createSearchEngine({ openBracket, closeBracket });
+  const search = SearchEngine({ openBracket, closeBracket });
 
   const states = {
     newChunk: (newChunk, onData, onDone) => {
@@ -23,7 +23,7 @@ const machine = ({ openBracket, closeBracket }) => {
       next();
     },
     inspect: () => {
-      const { lastIndex, match } = parser.findOpenTag(chunk, chunkOffset);
+      const { lastIndex, match } = search.findOpenTag(chunk, chunkOffset);
       if (isNaN(lastIndex)) {
         states.endOfChunk();
       } else {
@@ -34,7 +34,7 @@ const machine = ({ openBracket, closeBracket }) => {
       }
     },
     collect: () => {
-      const { lastIndex, error } = parser.findCloseTag(chunk, chunkOffset);
+      const { lastIndex, error } = search.findCloseTag(chunk, chunkOffset);
       if (lastIndex === undefined) {
         buffer += chunk.slice(chunkOffset);
         states.endOfChunk();
@@ -57,7 +57,7 @@ const machine = ({ openBracket, closeBracket }) => {
     reset: () => {
       this.buffer = '';
       setCallBacks(null, null);
-      parser.reset();
+      search.reset();
     },
   };
 
@@ -68,4 +68,4 @@ const machine = ({ openBracket, closeBracket }) => {
   };
 };
 
-module.exports = { createBodyParser: machine };
+module.exports = { TagReader };

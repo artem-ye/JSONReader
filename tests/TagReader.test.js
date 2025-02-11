@@ -1,12 +1,12 @@
 //const assert = require('node:assert');
 const { todo } = require('node:test');
 
-const { createBodyParser } = require('../src/bodyParser.js');
+const { TagReader } = require('../src/reader/TagReader.js');
 
-todo('Parser tests', () => {
+todo('Parser tests', { skip: true }, () => {
   const openBracket = '{';
   const closeBracket = '}';
-  const p = createBodyParser({ openBracket, closeBracket });
+  const p = TagReader({ openBracket, closeBracket });
   const onData = (err, data) => console.log('onData', { err, data });
   const onDone = () => console.log('onDone', 'end of chunk');
 

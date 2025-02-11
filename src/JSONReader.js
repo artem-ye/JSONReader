@@ -1,9 +1,11 @@
 'use strict';
 
 const { Transform } = require('node:stream');
-const ParseMode = require('./src/parseMode.js');
+const ParseMode = require('./parser/modes.js');
 
-class JsonParser extends Transform {
+//const curry = (f) => { }
+
+class JSONReader extends Transform {
   #state = null;
   #parser = null;
 
@@ -36,7 +38,7 @@ class JsonParser extends Transform {
     };
 
     const { 0: match, index } = chunk.match(/[\\[\\{]/) || {};
-    match in mode ? mode[match]() : callback(new Error('Wrong JSON data'));
+    match in mode ? mode[match]() : callback(new Error('Wrong data format'));
   }
 
   #parseState(chunk, encoding, done) {
@@ -45,12 +47,11 @@ class JsonParser extends Transform {
   }
 
   #end(callback) {
-    const onData = (error, data) => (error ? callback(error) : this.push(data));
-    this.#parser.end(onData, callback);
+    this.#parser.end(callback);
     this.#setState(this.#inspectState);
   }
 }
-
+/*
 const main = () => {
   const stream = new JsonParser({ objectMode: true });
   stream.on('error', () => {
@@ -74,3 +75,6 @@ const main = () => {
 };
 
 main();
+*/
+
+module.exports = { JSONReader };

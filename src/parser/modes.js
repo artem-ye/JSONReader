@@ -1,6 +1,7 @@
 'use strict';
 
-const { createBodyParser } = require('./bodyParser');
+const { TagReader } = require('../reader/TagReader.js');
+const { deserialize, NaiveQueue } = require('./utils.js');
 
 class BaseMode {
   feed(chunk, onData, onDone) {
@@ -9,9 +10,10 @@ class BaseMode {
     onDone(error);
   }
 
-  end(onData, onDone) {
+  end(callback) {
     const error = null;
-    onDone(error);
+    const data = null;
+    callback(error, data);
   }
 
   reset() {}
@@ -25,12 +27,9 @@ class Accumulative extends BaseMode {
     onDone(null);
   }
 
-  end(onData, onDone) {
-    const resolve = (data) => {
-      onData(data);
-      onDone(null);
-    };
-    const reject = (err) => onDone(err);
+  end(callback) {
+    const resolve = (data) => callback(null, data);
+    const reject = (err) => callback(err);
     deserialize(this.#buffer).then(resolve, reject);
     this.reset();
   }
@@ -46,8 +45,8 @@ class Chunked extends BaseMode {
 
   constructor() {
     super();
-    this.#parser = createBodyParser({ openBracket: '{', closeBracket: '}' });
-    this.#queue = AsyncQueue();
+    this.#parser = TagReader({ openBracket: '{', closeBracket: '}' });
+    this.#queue = NaiveQueue();
   }
 
   feed(chunk, onData, onDone) {
@@ -74,8 +73,8 @@ class Chunked extends BaseMode {
     this.#parser.feed(chunk, _data, _done);
   }
 
-  end(onData, onDone) {
-    onDone(null);
+  end(callback) {
+    callback(null);
     this.reset();
   }
 
@@ -83,27 +82,5 @@ class Chunked extends BaseMode {
     this.#parser.reset();
   }
 }
-
-const AsyncQueue = () => {
-  const queue = [];
-  return {
-    enqueue: (promise) => queue.push(promise),
-    clear: () => (queue.fill(undefined), (queue.length = 0)),
-    dequeue: () => Promise.all(queue),
-  };
-};
-
-const deserialize = (data) => {
-  const parse = (resolve, reject) => {
-    try {
-      JSON.parse(data);
-      resolve(data);
-    } catch (err) {
-      reject(err);
-    }
-  };
-  const parseAsync = (resolve, reject) => setTimeout(parse, 0, resolve, reject);
-  return new Promise(parseAsync);
-};
 
 module.exports = { Accumulative, Chunked };

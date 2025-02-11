@@ -1,18 +1,18 @@
 'use strict';
 
-const { createBracketsCollector } = require('./bracketsCollector.js');
+const { BracketsCollector } = require('./BracketsCollector.js');
 
 // RegExp utils
 const esc = (s) => `\\${s}`;
 const withLastIndex = (r, lastIndex) => ((r.lastIndex = lastIndex), r);
 
-const createSearchEngine = ({ openBracket, closeBracket }) => {
+const SearchEngine = ({ openBracket, closeBracket }) => {
   const openBracketRe = new RegExp(`(?<!\\\\)${esc(openBracket)}`, 'g');
   const bracketRe = new RegExp(
     `(?<!\\\\)[${esc(openBracket)}${esc(closeBracket)}]`,
     'g'
   );
-  const bracketsCounter = createBracketsCollector({
+  const bracketsCounter = BracketsCollector({
     openBracket,
     closeBracket,
   });
@@ -52,4 +52,4 @@ const createSearchEngine = ({ openBracket, closeBracket }) => {
   };
 };
 
-module.exports = { createSearchEngine };
+module.exports = { SearchEngine };

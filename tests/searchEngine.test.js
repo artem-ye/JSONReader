@@ -1,10 +1,10 @@
 const assert = require('node:assert');
 const { it, describe } = require('node:test');
-const { createSearchEngine } = require('../src/searchEngine');
+const { SearchEngine } = require('../src/reader/SearchEngine.js');
 
 describe('Search engine: Use cases', () => {
   it('Object {}', () => {
-    const engine = createSearchEngine({ openBracket: '{', closeBracket: '}' });
+    const engine = SearchEngine({ openBracket: '{', closeBracket: '}' });
     engine.reset();
     const jsonStr = '[{"a": {"skip this": "\\}"}, "b": [1,2,3] }';
     let res = engine.findOpenTag(jsonStr, 0);
@@ -15,7 +15,7 @@ describe('Search engine: Use cases', () => {
   });
 
   it('Array []', () => {
-    const engine = createSearchEngine({
+    const engine = SearchEngine({
       openBracket: '[',
       closeBracket: ']',
     });
@@ -27,17 +27,16 @@ describe('Search engine: Use cases', () => {
 
     const startIndex = res.lastIndex - 1;
     const { lastIndex } = engine.findCloseTag(jsonStr, res.lastIndex);
-    console.log(lastIndex);
     assert.strictEqual(lastIndex > startIndex + 1, true);
   });
 });
 
 it('Typing checks', () => {
-  assert.strictEqual(typeof createSearchEngine === 'function', true);
+  assert.strictEqual(typeof SearchEngine === 'function', true);
 });
 
 describe('Search engine: Unit test', () => {
-  const engine = createSearchEngine({ openBracket: '{', closeBracket: '}' });
+  const engine = SearchEngine({ openBracket: '{', closeBracket: '}' });
 
   it('regExp tests', () => {
     let res = engine.findOpenTag('[}', 0);

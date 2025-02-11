@@ -1,9 +1,9 @@
 const assert = require('node:assert');
 const { it, describe } = require('node:test');
-const { createBracketsCollector } = require('../src/bracketsCollector.js');
+const { BracketsCollector } = require('../src/reader/BracketsCollector.js');
 
 describe('Brackets collector common tests', () => {
-  const collector = createBracketsCollector({
+  const collector = BracketsCollector({
     openBracket: '{',
     closeBracket: '}',
   });
@@ -11,7 +11,7 @@ describe('Brackets collector common tests', () => {
   const countState = () => collector.state().count;
 
   it('interface', () => {
-    assert.strictEqual(typeof createBracketsCollector === 'function', true);
+    assert.strictEqual(typeof BracketsCollector === 'function', true);
     assert.strictEqual(typeof collector === 'object', true);
     assert.ok(collector.collect);
     assert.ok(collector.state);
