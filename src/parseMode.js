@@ -51,27 +51,26 @@ class Chunked extends BaseMode {
   }
 
   feed(chunk, onData, onDone) {
-    const emit = {
-      data: (data) => onData(data),
-      error: (err) => end(err),
-      success: () => end(null),
-    };
-
-    let isDone = false;
+    let pending = true;
     const end = (err) => {
-      if (!isDone) {
+      if (pending) {
+        pending = false;
         queue.clear();
-        isDone = true;
         onDone(err);
       }
     };
 
+    const emit = {
+      data: (data) => void (pending && onData(data)),
+      error: (err) => end(err),
+      success: () => end(null),
+    };
     const queue = this.#queue;
     const enqueue = (str) => queue.enqueue(deserialize(str).then(emit.data));
     const dequeue = () => queue.dequeue().then(emit.success, emit.error);
 
-    const _data = (err, result) => (err ? end(err) : enqueue(result));
-    const _done = () => dequeue();
+    const _data = (err, result) => void (err ? end(err) : enqueue(result));
+    const _done = () => void (pending && dequeue());
     this.#parser.feed(chunk, _data, _done);
   }
 
