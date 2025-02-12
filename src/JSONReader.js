@@ -3,8 +3,6 @@
 const { Transform } = require('node:stream');
 const ParseMode = require('./parser/modes.js');
 
-//const curry = (f) => { }
-
 class JSONReader extends Transform {
   #state = null;
   #parser = null;
@@ -51,30 +49,5 @@ class JSONReader extends Transform {
     this.#setState(this.#inspectState);
   }
 }
-/*
-const main = () => {
-  const stream = new JsonParser({ objectMode: true });
-  stream.on('error', () => {
-    console.log('Oops');
-  });
-  stream.write('[{"a": 1},');
-  stream.write('{"b": 21}, {"c": 22}');
-  stream.write('"f": [\\{"x": 0\\}], {"d": 31}');
-  stream.write(', {"e" ');
-  stream.write(': 41},  {');
-  stream.write('"f": 41},  {"g": 51} ');
-  stream.end();
-
-  const iterate = async () => {
-    for await (const data of stream) {
-      console.log('await', { data });
-    }
-  };
-
-  iterate().catch((e) => console.log('Eah!!!', e.message));
-};
-
-main();
-*/
 
 module.exports = { JSONReader };
