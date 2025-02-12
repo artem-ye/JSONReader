@@ -44,26 +44,26 @@ class Chunked extends BaseMode {
   }
 
   feed(chunk, onData, onDone) {
+    const parseQueue = this.#parseQueue;
     let pending = true;
+
     const end = (err) => {
       if (!pending) return;
       pending = false;
-      this.#parseQueue.clear();
+      parseQueue.clear();
       onDone(err);
     };
 
     const parse = (err, data) => {
       if (err) return void end(err);
       const resolve = (result) => void (pending && onData(result));
-      this.#parseQueue.enqueue(data, resolve);
+      parseQueue.enqueue(data, resolve);
     };
-
     const resolve = () => {
       if (!pending) return;
       const resolve = () => end(null);
-      this.#parseQueue.resolve(resolve, end);
+      parseQueue.resolve(resolve, end);
     };
-
     this.#reader.feed(chunk, parse, resolve);
   }
 
@@ -74,6 +74,7 @@ class Chunked extends BaseMode {
 
   reset() {
     this.#reader.reset();
+    this.#parseQueue.clear();
   }
 }
 
