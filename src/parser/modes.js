@@ -9,13 +9,11 @@ class BaseMode {
     onData(chunk);
     onDone(error);
   }
-
   end(callback) {
     const error = null;
     const data = null;
     callback(error, data);
   }
-
   reset() {}
 }
 
@@ -26,51 +24,47 @@ class Accumulative extends BaseMode {
     this.#buffer += chunk;
     onDone(null);
   }
-
   end(callback) {
-    const resolve = (data) => callback(null, data);
-    const reject = (err) => callback(err);
-    deserialize(this.#buffer).then(resolve, reject);
+    deserialize(this.#buffer).then((res) => callback(null, res), callback);
     this.reset();
   }
-
   reset() {
     this.#buffer = '';
   }
 }
 
 class Chunked extends BaseMode {
-  #parser = null;
-  #queue = null;
+  #reader = null;
+  #parseQueue = null;
 
   constructor() {
     super();
-    this.#parser = TagReader({ openBracket: '{', closeBracket: '}' });
-    this.#queue = NaiveQueue();
+    this.#reader = TagReader({ openBracket: '{', closeBracket: '}' });
+    this.#parseQueue = ParseQueue();
   }
 
   feed(chunk, onData, onDone) {
     let pending = true;
     const end = (err) => {
-      if (pending) {
-        pending = false;
-        queue.clear();
-        onDone(err);
-      }
+      if (!pending) return;
+      pending = false;
+      this.#parseQueue.clear();
+      onDone(err);
     };
 
-    const emit = {
-      data: (data) => void (pending && onData(data)),
-      error: (err) => end(err),
-      success: () => end(null),
+    const parse = (err, data) => {
+      if (err) return void end(err);
+      const resolve = (result) => void (pending && onData(result));
+      this.#parseQueue.enqueue(data, resolve);
     };
-    const queue = this.#queue;
-    const enqueue = (str) => queue.enqueue(deserialize(str).then(emit.data));
-    const dequeue = () => queue.dequeue().then(emit.success, emit.error);
 
-    const _data = (err, result) => void (err ? end(err) : enqueue(result));
-    const _done = () => void (pending && dequeue());
-    this.#parser.feed(chunk, _data, _done);
+    const resolve = () => {
+      if (!pending) return;
+      const resolve = () => end(null);
+      this.#parseQueue.resolve(resolve, end);
+    };
+
+    this.#reader.feed(chunk, parse, resolve);
   }
 
   end(callback) {
@@ -79,8 +73,23 @@ class Chunked extends BaseMode {
   }
 
   reset() {
-    this.#parser.reset();
+    this.#reader.reset();
   }
 }
+
+const ParseQueue = () => {
+  const queue = NaiveQueue();
+  return {
+    enqueue: (data, resolve) => {
+      queue.enqueue(deserialize(data).then(resolve));
+    },
+    resolve: (resolve, reject) => {
+      queue.dequeue().then(resolve, reject);
+    },
+    clear: () => {
+      queue.clear();
+    },
+  };
+};
 
 module.exports = { Accumulative, Chunked };
