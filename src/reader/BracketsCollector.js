@@ -1,65 +1,58 @@
 'use strict';
 
-const createCounter = (cb) => {
-  let value = 0;
-  const _interface = {
-    get value() {
-      return value;
-    },
-    reset: () => void (value = 0),
-    inc: () => void value++,
-    dec: () => {
-      if (--value < 1) cb(value < 0);
-    },
-  };
-  return _interface;
-};
+class BracketsCollector {
+  #count = 0;
+  #error = null;
+  #done = false;
+  #brackets = null;
 
-const BracketsCollector = ({ openBracket, closeBracket }) => {
-  let done = false;
-  let error = false;
-  let state = null;
-  const setState = (newState) => void (state = newState);
+  constructor({ openBracket, closeBracket }) {
+    this.#brackets = { openBracket, closeBracket };
+  }
 
-  const counter = createCounter((err) => end(err));
-  const processor = {
-    [openBracket]: () => counter.inc(),
-    [closeBracket]: () => counter.dec(),
-  };
+  collect(data) {
+    if (data === this.#brackets.openBracket) this.#increase();
+    else if (data === this.#brackets.closeBracket) this.#decrease();
+    else this.#fail(`Unexpected bracket ${data}`);
+    return {
+      done: this.#done,
+      error: this.#error,
+    };
+  }
+  reset() {
+    this.#count = 0;
+    this.#error = null;
+    this.#done = false;
+  }
 
-  const collect = (chunk) => state(chunk);
+  get done() {
+    return this.#done;
+  }
+  get errored() {
+    return this.#error !== null;
+  }
+  get error() {
+    return this.#error;
+  }
+  get count() {
+    return this.#count;
+  }
 
-  const end = (isError) => {
-    done = true;
-    error = isError;
-    setState(resetState);
-  };
+  #increase() {
+    this.#count++;
+  }
+  #decrease() {
+    if (--this.#count > 0) return;
+    const errored = this.#count < 0;
+    errored ? this.#fail('Inconsistent brackets count') : this.#end();
+  }
+  #end() {
+    this.#done = true;
+  }
+  #fail(message) {
+    this.#done = true;
+    this.#error = new Error(message);
+  }
+}
 
-  const reset = () => {
-    done = false;
-    error = false;
-    counter.reset();
-    setState(collectState);
-  };
-
-  const collectState = (chunk) => {
-    if (chunk in processor) processor[chunk]();
-  };
-
-  const resetState = (chunk) => {
-    reset();
-    state(chunk);
-  };
-
-  state = collectState;
-  // prettier-ignore
-  return {
-    collect,
-    reset,
-    get errored() { return error; },
-    get done() { return done; },
-    state: () => ({ done: done, errored: error, count: counter.value }),
-  };
-};
-
-module.exports = { BracketsCollector: BracketsCollector };
+module.exports = { BracketsCollector };

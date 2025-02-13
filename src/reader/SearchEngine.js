@@ -12,15 +12,15 @@ const SearchEngine = ({ openBracket, closeBracket }) => {
     `(?<!\\\\)[${esc(openBracket)}${esc(closeBracket)}]`,
     'g'
   );
-  const bracketsCounter = BracketsCollector({
+  const bracketsCounter = new BracketsCollector({
     openBracket,
     closeBracket,
   });
 
   const findOpenTag = (chunk, offset) => {
     const re = withLastIndex(openBracketRe, offset);
-    let lastIndex = undefined;
     const { 0: match } = re.exec(chunk) || {};
+    let lastIndex = undefined;
     if (match) {
       lastIndex = re.lastIndex;
       bracketsCounter.collect(match);
@@ -30,19 +30,15 @@ const SearchEngine = ({ openBracket, closeBracket }) => {
 
   const findCloseTag = (chunk, offset) => {
     const re = withLastIndex(bracketRe, offset);
-    let res = null;
+    let reRes = null;
     let lastIndex = undefined;
-    let error = null;
-    while (isNaN(lastIndex) && (res = re.exec(chunk))) {
-      bracketsCounter.collect(res[0]);
+    while (isNaN(lastIndex) && (reRes = re.exec(chunk))) {
+      bracketsCounter.collect(reRes[0]);
       if (bracketsCounter.done) {
         lastIndex = re.lastIndex;
-        if (bracketsCounter.errored) {
-          error = new Error('Inconsistent brackets count');
-        }
       }
     }
-    return { lastIndex, error };
+    return { lastIndex, error: bracketsCounter.error };
   };
 
   return {
