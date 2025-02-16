@@ -13,7 +13,7 @@ const TagReader = ({ openBracket, closeBracket }) => {
   const next = () => state();
   const setCallBacks = (data, done) => void ((onDone = done), (onData = data));
 
-  const search = SearchEngine({ openBracket, closeBracket });
+  const search = new SearchEngine({ openBracket, closeBracket });
 
   const states = {
     newChunk: (newChunk, onData, onDone) => {
