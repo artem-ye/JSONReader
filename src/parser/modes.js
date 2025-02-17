@@ -39,7 +39,7 @@ class Chunked extends BaseMode {
 
   constructor() {
     super();
-    this.#reader = TagReader({ openBracket: '{', closeBracket: '}' });
+    this.#reader = new TagReader({ openBracket: '{', closeBracket: '}' });
     this.#parseQueue = ParseQueue();
   }
 
@@ -59,6 +59,7 @@ class Chunked extends BaseMode {
       const resolve = (result) => void (pending && onData(result));
       parseQueue.enqueue(data, resolve);
     };
+    //TODO: add err handling while to resolve cb
     const resolve = () => {
       if (!pending) return;
       const resolve = () => end(null);

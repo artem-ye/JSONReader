@@ -3,10 +3,10 @@ const { todo } = require('node:test');
 
 const { TagReader } = require('../src/reader/TagReader.js');
 
-todo('Parser tests', { skip: true }, () => {
+todo('Parser tests', { skip: false }, () => {
   const openBracket = '{';
   const closeBracket = '}';
-  const p = TagReader({ openBracket, closeBracket });
+  const p = new TagReader({ openBracket, closeBracket });
   const onData = (err, data) => console.log('onData', { err, data });
   const onDone = () => console.log('onDone', 'end of chunk');
 

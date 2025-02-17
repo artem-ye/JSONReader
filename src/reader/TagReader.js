@@ -2,70 +2,71 @@
 
 const { SearchEngine } = require('./SearchEngine.js');
 
-const TagReader = ({ openBracket, closeBracket }) => {
-  let chunk = '';
-  let chunkOffset = 0;
-  let buffer = '';
-  let state = null;
-  let onDone = null;
-  let onData = null;
-  const setState = (newState) => void (state = newState);
-  const next = () => state();
-  const setCallBacks = (data, done) => void ((onDone = done), (onData = data));
+class TagReader {
+  #chunk = '';
+  #chunkOffset = 0;
+  #buffer = '';
+  #search = null;
+  #handler = null;
+  #onDone = null;
+  #onData = null;
 
-  const search = new SearchEngine({ openBracket, closeBracket });
+  constructor({ openBracket, closeBracket }) {
+    this.#search = new SearchEngine({ openBracket, closeBracket });
+    this.#handler = this.#findStart;
+  }
 
-  const states = {
-    newChunk: (newChunk, onData, onDone) => {
-      chunk = newChunk;
-      chunkOffset = 0;
-      setCallBacks(onData, onDone);
-      next();
-    },
-    inspect: () => {
-      const { lastIndex, match } = search.findOpenTag(chunk, chunkOffset);
-      if (isNaN(lastIndex)) {
-        states.endOfChunk();
-      } else {
-        buffer += match;
-        chunkOffset = lastIndex;
-        setState(states.collect);
-        next();
-      }
-    },
-    collect: () => {
-      const { lastIndex, error } = search.findCloseTag(chunk, chunkOffset);
-      if (lastIndex === undefined) {
-        buffer += chunk.slice(chunkOffset);
-        states.endOfChunk();
-      } else {
-        buffer += chunk.slice(chunkOffset, lastIndex);
-        chunkOffset = lastIndex;
-        states.collected(error);
-      }
-    },
-    collected: (error) => {
-      onData(error, buffer);
-      buffer = '';
-      setState(states.inspect);
-      next();
-    },
-    endOfChunk: () => {
-      onDone();
-      setCallBacks(null, null);
-    },
-    reset: () => {
-      this.buffer = '';
-      setCallBacks(null, null);
-      search.reset();
-    },
-  };
+  feed(chunk, onData, onDone) {
+    this.#chunk = chunk;
+    this.#chunkOffset = 0;
+    this.#onData = onData;
+    this.#onDone = onDone;
+    this.#handler();
+  }
+  reset() {
+    this.#buffer = '';
+    this.#onData = null;
+    this.#onDone = null;
+    this.#search.reset();
+    this.#handler = this.#findStart;
+  }
 
-  state = states.inspect;
-  return {
-    feed: states.newChunk,
-    reset: states.reset,
-  };
-};
+  #findStart() {
+    const res = this.#search.findOpenTag(this.#chunk, this.#chunkOffset);
+    const { lastIndex, match, error } = res;
+    if (lastIndex === undefined) {
+      this.#done(error);
+    } else {
+      this.#buffer += match;
+      this.#chunkOffset = lastIndex;
+      this.#next(this.#findEnd);
+    }
+  }
+  #findEnd() {
+    const res = this.#search.findCloseTag(this.#chunk, this.#chunkOffset);
+    const { lastIndex, error } = res;
+    if (lastIndex === undefined) {
+      this.#buffer += this.#chunk.slice(this.#chunkOffset);
+      this.#done(error);
+    } else {
+      this.#buffer += this.#chunk.slice(this.#chunkOffset, lastIndex);
+      this.#chunkOffset = lastIndex;
+
+      this.#onData(error, this.#buffer);
+      this.#buffer = '';
+      this.#next(this.#findStart);
+    }
+  }
+
+  #done(error) {
+    this.#onDone(error);
+    this.#onData = null;
+    this.#onDone = null;
+  }
+  #next(handler) {
+    this.#handler = handler;
+    this.#handler();
+  }
+}
 
 module.exports = { TagReader };

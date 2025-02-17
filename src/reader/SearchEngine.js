@@ -36,7 +36,7 @@ class SearchEngine {
     if (match) {
       lastIndex = re.lastIndex;
       this.#bracketsCounter.collect(match);
-      error = this.#bracketsCounter.error;
+      error = this.#bracketsCounter.error || null;
     }
     return { match, lastIndex, error };
   }
@@ -51,7 +51,7 @@ class SearchEngine {
       this.#bracketsCounter.collect(reRes[0]);
       if (this.#bracketsCounter.done) {
         lastIndex = re.lastIndex;
-        error = this.#bracketsCounter.error;
+        error = this.#bracketsCounter.error || null;
       }
     }
     return { lastIndex, error };
