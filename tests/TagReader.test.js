@@ -3,6 +3,7 @@ const { describe, it, mock, beforeEach } = require('node:test');
 
 const { TagReader } = require('../src/reader/TagReader.js');
 
+<<<<<<< HEAD
 describe('Parser tests', () => {
   const openBracket = '{';
   const closeBracket = '}';
@@ -69,4 +70,19 @@ describe('Parser tests', () => {
     assert.equal(onDone.mock.callCount(), 3);
     assert.strictEqual(error, null);
   });
+=======
+todo('Parser tests', { skip: false }, () => {
+  const openBracket = '{';
+  const closeBracket = '}';
+  const p = new TagReader({ openBracket, closeBracket });
+  const onData = (err, data) => console.log('onData', { err, data });
+  const onDone = () => console.log('onDone', 'end of chunk');
+
+  p.feed('[{"a": 1},', onData, onDone);
+  p.feed('{"b": 21}, {"c": 22}', onData, onDone);
+  p.feed('"f": [\\{"x": 0\\}], {"d": 31}', onData, onDone);
+  p.feed(', {"e" ', onData, onDone);
+  p.feed(': 41},  {', onData, onDone);
+  p.feed('"f": 41},  {"g": 51} ', onData, onDone);
+>>>>>>> d3fa11d (Refactor TagReader into class)
 });
