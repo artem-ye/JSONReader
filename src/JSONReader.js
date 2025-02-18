@@ -1,52 +1,59 @@
 'use strict';
 
 const { Transform } = require('node:stream');
-const ParseMode = require('./parser/modes.js');
+const ParseStream = require('./parser/parsers.js');
+
+// Be free to use more complex constructions in
+// chunkedPattern param.
+// Something like this: '{results:{data:['
+const selectParser = (chunk, chunkedPattern = '[') => {
+  let Parser = null;
+  let offset = 0;
+
+  if (chunk.startsWith(chunkedPattern)) {
+    Parser = ParseStream.Chunked;
+    offset = chunkedPattern.length;
+  } else {
+    Parser = ParseStream.Accumulative;
+    offset = 0;
+  }
+  return { Parser, offset };
+};
 
 class JSONReader extends Transform {
-  #state = null;
+  #transform = null;
   #parser = null;
 
   constructor(...args) {
     super(...args);
-    this.#setState(this.#inspectState);
+    this.#transform = this.#selectParser;
   }
 
   _transform(data, encoding, callback) {
-    this.#state(data, encoding, callback);
+    this.#transform(data, encoding, callback);
   }
 
   _flush(callback) {
-    this.#end(callback);
-  }
-
-  #setState(state) {
-    this.#state = state;
-  }
-
-  #inspectState(chunk, encoding, callback) {
-    const mode = {
-      '[': () => mode._use(ParseMode.Chunked, chunk.slice(index + 1)),
-      '{': () => mode._use(ParseMode.Accumulative, chunk),
-      _use: (Parser, data) => {
-        this.#parser = new Parser();
-        this.#setState(this.#parseState);
-        this.#state(data, encoding, callback);
-      },
-    };
-
-    const { 0: match, index } = chunk.match(/[\\[\\{]/) || {};
-    match in mode ? mode[match]() : callback(new Error('Wrong data format'));
-  }
-
-  #parseState(chunk, encoding, done) {
-    const onData = (result) => void this.push(result);
-    this.#parser.feed(chunk, onData, done);
-  }
-
-  #end(callback) {
     this.#parser.end(callback);
-    this.#setState(this.#inspectState);
+    this.#transform = this.#selectParser;
+  }
+
+  #selectParser(chunk, encoding, callback) {
+    const { Parser, offset } = selectParser(chunk);
+    const parser = new Parser({ objectMode: true });
+
+    const listen = async () => {
+      for await (const data of parser) this.push(data);
+    };
+    listen().catch((err) => this.emit('error', err));
+
+    this.#parser = parser;
+    this.#transform = this.#passThrough;
+    this.#transform(chunk.slice(offset), encoding, callback);
+  }
+
+  #passThrough(chunk, encoding, done) {
+    this.#parser.write(chunk, encoding, done);
   }
 }
 

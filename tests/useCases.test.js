@@ -59,8 +59,7 @@ describe('Chunked', () => {
     const obj2 = { b: 2 };
 
     const reader = new JSONReader({ objectMode: true });
-    reader.write('[');
-    reader.write(JSON.stringify(obj1) + ',');
+    reader.write('[' + JSON.stringify(obj1) + ',');
     reader.write(JSON.stringify(obj2));
     reader.write(']');
     reader.end();
