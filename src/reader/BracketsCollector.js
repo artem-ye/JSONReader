@@ -25,19 +25,6 @@ class BracketsCollector {
     this.#done = false;
   }
 
-  get done() {
-    return this.#done;
-  }
-  get errored() {
-    return this.#error !== null;
-  }
-  get error() {
-    return this.#error;
-  }
-  get count() {
-    return this.#count;
-  }
-
   #increase() {
     this.#count++;
   }
@@ -52,6 +39,19 @@ class BracketsCollector {
   #fail(message) {
     this.#done = true;
     this.#error = new Error(message);
+  }
+
+  get done() {
+    return this.#done;
+  }
+  get errored() {
+    return this.#error !== null;
+  }
+  get error() {
+    return this.#error;
+  }
+  get count() {
+    return this.#count;
   }
 }
 
