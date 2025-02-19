@@ -13,8 +13,8 @@ class Accumulative extends Transform {
   }
 
   _flush(cb) {
-    deserialize(this.#buffer).then((res) => cb(null, res), cb);
-    this.#buffer = '';
+    const success = (res) => cb(null, res);
+    deserialize(this.#buffer).then(success, cb).finally(this.reset);
   }
 
   reset() {
@@ -39,6 +39,7 @@ class Chunked extends Transform {
     const end = (err) => {
       if (!pending) return;
       pending = false;
+      // if (err) this.reset();
       cb(err);
     };
 
@@ -47,9 +48,7 @@ class Chunked extends Transform {
       if (err) {
         end(err);
       } else {
-        const resolve = (res) => {
-          if (pending) this.push(res);
-        };
+        const resolve = (res) => void (pending && this.push(res));
         parseQueue.enqueue(data, resolve);
       }
     };
