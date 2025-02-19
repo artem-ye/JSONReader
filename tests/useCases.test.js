@@ -2,8 +2,8 @@ const assert = require('node:assert');
 const { it, describe } = require('node:test');
 const { JSONReader } = require('../src/JSONReader.js');
 
-describe('Accumulative test', () => {
-  it('Call backs', async () => {
+describe('Accumulative test', { skip: false }, () => {
+  it('Call backs', { skip: false }, async () => {
     const reader = new JSONReader({ objectMode: true });
     const obj = {
       x: { a: 1 },
@@ -15,8 +15,8 @@ describe('Accumulative test', () => {
     reader.on('data', (data) => results.push(data));
 
     const promise = new Promise((resolve, reject) => {
-      reader.on('end', resolve);
       reader.on('error', reject);
+      reader.on('end', resolve);
 
       const index = json.indexOf(',');
       reader.write(json.slice(0, index));
@@ -29,7 +29,7 @@ describe('Accumulative test', () => {
     assert.deepEqual(results[0], obj);
   });
 
-  it('Error handling', async () => {
+  it('Error handling', { skip: false }, async () => {
     const reader = new JSONReader({ objectMode: true });
     const obj = {
       x: { a: 1 },
@@ -53,7 +53,7 @@ describe('Accumulative test', () => {
   });
 });
 
-describe('Chunked', () => {
+describe('Chunked', { skip: false }, () => {
   it('For await', async () => {
     const obj1 = { a: 1 };
     const obj2 = { b: 2 };

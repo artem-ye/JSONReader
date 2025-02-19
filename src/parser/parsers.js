@@ -14,7 +14,8 @@ class Accumulative extends Transform {
 
   _flush(cb) {
     const success = (res) => cb(null, res);
-    deserialize(this.#buffer).then(success, cb).finally(this.reset);
+    const end = () => this.reset();
+    deserialize(this.#buffer).then(success, cb).finally(end);
   }
 
   reset() {
@@ -29,7 +30,7 @@ class Chunked extends Transform {
   constructor(...args) {
     super(...args);
     this.#reader = new TagReader({ openBracket: '{', closeBracket: '}' });
-    this.#parseQueue = parseQueue();
+    this.#parseQueue = new ParseQueue();
   }
 
   _transform(chunk, encoding, cb) {
@@ -39,11 +40,10 @@ class Chunked extends Transform {
     const end = (err) => {
       if (!pending) return;
       pending = false;
-      // if (err) this.reset();
+      if (err) this.reset();
       cb(err);
     };
 
-    // TODO: need cancelable async queue
     const onData = (err, data) => {
       if (err) {
         end(err);
@@ -75,22 +75,22 @@ class Chunked extends Transform {
   }
 }
 
-const parseQueue = () => {
-  const queue = NaiveQueue();
-  return {
-    enqueue: (data, resolve) => {
-      queue.enqueue(deserialize(data).then(resolve));
-    },
-    resolve: (resolve, reject) => {
-      queue
-        .dequeue()
-        .then(resolve, reject)
-        .finally(() => queue.clear());
-    },
-    clear: () => {
-      queue.clear();
-    },
-  };
-};
+class ParseQueue {
+  constructor() {
+    this.queue = NaiveQueue();
+  }
+  enqueue(data, resolve) {
+    this.queue.enqueue(deserialize(data).then(resolve));
+  }
+  resolve(resolve, reject) {
+    this.queue
+      .dequeue()
+      .then(resolve, reject)
+      .finally(() => this.clear());
+  }
+  clear() {
+    this.queue.clear();
+  }
+}
 
 module.exports = { Accumulative, Chunked };
