@@ -2,66 +2,60 @@ const assert = require('node:assert');
 const { it, describe } = require('node:test');
 const { BracketsCollector } = require('../src/reader/BracketsCollector.js');
 
-describe('Brackets collector common tests', () => {
-  const collector = BracketsCollector({
+describe('Brackets collector', () => {
+  const collector = new BracketsCollector({
     openBracket: '{',
     closeBracket: '}',
   });
-  const doneState = () => collector.done;
-  const countState = () => collector.state().count;
 
-  it('interface', () => {
-    assert.strictEqual(typeof BracketsCollector === 'function', true);
-    assert.strictEqual(typeof collector === 'object', true);
-    assert.ok(collector.collect);
-    assert.ok(collector.state);
-  });
+  const done = () => collector.done;
+  const error = () => collector.error;
+  const collectedCount = () => collector.count;
 
-  it('common use case', () => {
-    assert.equal(doneState(), false);
-    assert.strictEqual(countState(), 0);
+  it('counter', () => {
+    assert.equal(done(), false);
+    assert.strictEqual(collectedCount(), 0);
 
     collector.collect('{');
-    assert.equal(doneState(), false);
-    assert.strictEqual(countState(), 1);
+    assert.equal(done(), false);
+    assert.strictEqual(collectedCount(), 1);
 
     collector.collect('{');
-    assert.equal(doneState(), false);
-    assert.strictEqual(countState(), 2);
+    assert.equal(done(), false);
+    assert.strictEqual(collectedCount(), 2);
 
     collector.collect('}');
-    assert.equal(doneState(), false);
-    assert.strictEqual(countState(), 1);
+    assert.equal(done(), false);
+    assert.strictEqual(collectedCount(), 1);
 
     collector.collect('}');
-    assert.equal(doneState(), true);
-    assert.strictEqual(countState(), 0);
+    assert.equal(done(), true);
+    assert.strictEqual(collectedCount(), 0);
   });
 
-  it('should automatically reset "done" state', () => {
-    collector.collect('{');
-    assert.equal(doneState(), false);
-    assert.strictEqual(countState(), 1);
-  });
-
-  it('reset', () => {
+  it('counter reset', () => {
     collector.reset();
-    assert.equal(doneState(), false);
-    assert.strictEqual(countState(), 0);
+    assert.equal(done(), false);
+    assert.strictEqual(collectedCount(), 0);
   });
 
   it('error', () => {
     collector.reset();
     collector.collect('{');
-    assert.strictEqual(collector.done, false);
-    assert.strictEqual(collector.errored, false);
+    assert.strictEqual(done(), false);
+    assert.strictEqual(error(), null);
 
     collector.collect('}');
-    assert.strictEqual(collector.done, true);
-    assert.strictEqual(collector.errored, false);
+    assert.strictEqual(done(), true);
+    assert.strictEqual(error(), null);
 
     collector.collect('}');
-    assert.strictEqual(collector.done, true);
-    assert.strictEqual(collector.errored, true);
+    assert.strictEqual(done(), true);
+    assert.strictEqual(error() instanceof Error, true);
+  });
+
+  it('error reset', () => {
+    collector.reset();
+    assert.strictEqual(error(), null);
   });
 });

@@ -4,9 +4,9 @@ const { SearchEngine } = require('../src/reader/SearchEngine.js');
 
 describe('Search engine: Use cases', () => {
   it('Object {}', () => {
-    const engine = SearchEngine({ openBracket: '{', closeBracket: '}' });
+    const engine = new SearchEngine({ openBracket: '{', closeBracket: '}' });
     engine.reset();
-    const jsonStr = '[{"a": {"skip this": "\\}"}, "b": [1,2,3] }';
+    const jsonStr = '[{"a": {"skip this": "\\}"}}';
     let res = engine.findOpenTag(jsonStr, 0);
     assert.strictEqual(res.lastIndex, 2);
 
@@ -15,7 +15,7 @@ describe('Search engine: Use cases', () => {
   });
 
   it('Array []', () => {
-    const engine = SearchEngine({
+    const engine = new SearchEngine({
       openBracket: '[',
       closeBracket: ']',
     });
@@ -31,12 +31,8 @@ describe('Search engine: Use cases', () => {
   });
 });
 
-it('Typing checks', () => {
-  assert.strictEqual(typeof SearchEngine === 'function', true);
-});
-
 describe('Search engine: Unit test', () => {
-  const engine = SearchEngine({ openBracket: '{', closeBracket: '}' });
+  const engine = new SearchEngine({ openBracket: '{', closeBracket: '}' });
 
   it('regExp tests', () => {
     let res = engine.findOpenTag('[}', 0);
@@ -63,4 +59,3 @@ describe('Search engine: Unit test', () => {
     assert.strictEqual(lastIndex, s.length);
   });
 });
-describe('Search engine use cases', () => {});

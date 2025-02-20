@@ -6,50 +6,60 @@ const { BracketsCollector } = require('./BracketsCollector.js');
 const esc = (s) => `\\${s}`;
 const withLastIndex = (r, lastIndex) => ((r.lastIndex = lastIndex), r);
 
-const SearchEngine = ({ openBracket, closeBracket }) => {
-  const openBracketRe = new RegExp(`(?<!\\\\)${esc(openBracket)}`, 'g');
-  const bracketRe = new RegExp(
-    `(?<!\\\\)[${esc(openBracket)}${esc(closeBracket)}]`,
-    'g'
-  );
-  const bracketsCounter = BracketsCollector({
-    openBracket,
-    closeBracket,
-  });
+const toOpenBracketRegExp = (openBracket) => {
+  return new RegExp(`(?<!\\\\)${esc(openBracket)}`, 'g');
+};
+const toBracketRegExp = (openBracket, closeBracket) => {
+  return new RegExp(`(?<!\\\\)[${esc(openBracket)}${esc(closeBracket)}]`, 'g');
+};
 
-  const findOpenTag = (chunk, offset) => {
-    const re = withLastIndex(openBracketRe, offset);
-    let lastIndex = undefined;
+class SearchEngine {
+  #openBracketRe = null;
+  #bracketRe = null;
+  #bracketsCounter = null;
+
+  constructor({ openBracket, closeBracket }) {
+    this.#openBracketRe = toOpenBracketRegExp(openBracket);
+    this.#bracketRe = toBracketRegExp(openBracket, closeBracket);
+    this.#bracketsCounter = new BracketsCollector({
+      openBracket,
+      closeBracket,
+    });
+  }
+
+  findOpenTag(chunk, offset) {
+    const re = withLastIndex(this.#openBracketRe, offset);
     const { 0: match } = re.exec(chunk) || {};
-    if (match) {
-      lastIndex = re.lastIndex;
-      bracketsCounter.collect(match);
-    }
-    return { match, lastIndex };
-  };
-
-  const findCloseTag = (chunk, offset) => {
-    const re = withLastIndex(bracketRe, offset);
-    let res = null;
     let lastIndex = undefined;
     let error = null;
-    while (isNaN(lastIndex) && (res = re.exec(chunk))) {
-      bracketsCounter.collect(res[0]);
-      if (bracketsCounter.done) {
+
+    if (match) {
+      lastIndex = re.lastIndex;
+      this.#bracketsCounter.collect(match);
+      error = this.#bracketsCounter.error || null;
+    }
+    return { match, lastIndex, error };
+  }
+
+  findCloseTag(chunk, offset) {
+    const re = withLastIndex(this.#bracketRe, offset);
+    let reRes = null;
+    let lastIndex = undefined;
+    let error = null;
+
+    while (lastIndex === undefined && (reRes = re.exec(chunk))) {
+      this.#bracketsCounter.collect(reRes[0]);
+      if (this.#bracketsCounter.done) {
         lastIndex = re.lastIndex;
-        if (bracketsCounter.errored) {
-          error = new Error('Inconsistent brackets count');
-        }
+        error = this.#bracketsCounter.error || null;
       }
     }
     return { lastIndex, error };
-  };
+  }
 
-  return {
-    findOpenTag,
-    findCloseTag,
-    reset: () => bracketsCounter.reset(),
-  };
-};
+  reset() {
+    this.#bracketsCounter.reset();
+  }
+}
 
 module.exports = { SearchEngine };
