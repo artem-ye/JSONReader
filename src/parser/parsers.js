@@ -33,10 +33,13 @@ class Chunked extends Transform {
     this.#parseQueue = new ParseQueue();
   }
 
-  _transform(chunk, encoding, cb) {
-    const parseQueue = this.#parseQueue;
-    let pending = true;
+  _flush(callback) {
+    this.reset();
+    callback(null);
+  }
 
+  _transform(chunk, encoding, cb) {
+    let pending = true;
     const end = (err) => {
       if (!pending) return;
       pending = false;
@@ -44,29 +47,13 @@ class Chunked extends Transform {
       cb(err);
     };
 
-    const onData = (err, data) => {
-      if (err) {
-        end(err);
-      } else {
-        const resolve = (res) => void (pending && this.push(res));
-        parseQueue.enqueue(data, resolve);
-      }
-    };
-    const onDone = (err) => {
-      if (!pending) return;
-      if (err) {
-        end(err);
-      } else {
-        const resolve = () => end(null);
-        parseQueue.resolve(resolve, end);
-      }
-    };
-    this.#reader.feed(chunk, onData, onDone);
-  }
+    const queue = this.#parseQueue;
+    const parse = () => void (pending && queue.dequeue(end));
+    const receive = (data) => void (pending && this.push(data));
 
-  _flush(callback) {
-    this.reset();
-    callback(null);
+    const onDone = (err) => (err ? end(err) : parse());
+    const onData = (err, res) => (err ? end(err) : queue.enqueue(res, receive));
+    this.#reader.feed(chunk, onData, onDone);
   }
 
   reset() {
@@ -82,10 +69,10 @@ class ParseQueue {
   enqueue(data, resolve) {
     this.queue.enqueue(deserialize(data).then(resolve));
   }
-  resolve(resolve, reject) {
+  dequeue(cb) {
     this.queue
       .dequeue()
-      .then(resolve, reject)
+      .then(() => cb(null), cb)
       .finally(() => this.clear());
   }
   clear() {
