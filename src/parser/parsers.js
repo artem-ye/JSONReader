@@ -1,25 +1,27 @@
 'use strict';
 
+const { Buffer } = require('node:buffer');
 const { Transform } = require('node:stream');
 const { TagReader } = require('../reader/TagReader.js');
 const { deserialize, NaiveQueue } = require('./utils.js');
 
 class Accumulative extends Transform {
-  #buffer = '';
+  #buffer = [];
 
   _transform(chunk, encoding, cb) {
-    this.#buffer += chunk;
+    this.#buffer.push(chunk);
     cb(null);
   }
 
   _flush(cb) {
+    const data = Buffer.concat(this.#buffer);
     const success = (res) => cb(null, res);
     const end = () => this.reset();
-    deserialize(this.#buffer).then(success, cb).finally(end);
+    deserialize(data).then(success, cb).finally(end);
   }
 
   reset() {
-    this.#buffer = '';
+    this.#buffer = [];
   }
 }
 
