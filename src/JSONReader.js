@@ -10,7 +10,7 @@ const selectParser = (chunk, chunkedPattern = '[') => {
   let Parser = null;
   let offset = 0;
 
-  if (chunk.startsWith(chunkedPattern)) {
+  if (chunk.indexOf(chunkedPattern) === 0) {
     Parser = ParseStream.Chunked;
     offset = chunkedPattern.length;
   } else {
@@ -25,7 +25,7 @@ class JSONReader extends Transform {
   #parser = null;
 
   constructor(...args) {
-    super(...args);
+    super({ ...args, objectMode: true });
     this.#transform = this.#selectParser;
   }
 

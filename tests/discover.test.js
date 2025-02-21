@@ -2,7 +2,6 @@
 
 //const assert = require('node:assert');
 const { it } = require('node:test');
-
 const { Transform } = require('node:stream');
 const { Buffer } = require('node:buffer');
 
@@ -34,6 +33,7 @@ it('discover', { todo: true, skip: true }, () => {
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
   class Chunked extends Transform {
     _transform(chunk, encoding, cb) {
       setTimeout(() => {
@@ -47,9 +47,11 @@ it('discover', { todo: true, skip: true }, () => {
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
   class Acc extends Transform {
     buffer = [];
     _transform(chunk, encoding, cb) {
+      console.log(encoding, Buffer.isBuffer(chunk), chunk);
       this.buffer.push(chunk);
       cb(null);
     }
@@ -61,17 +63,26 @@ it('discover', { todo: true, skip: true }, () => {
     }
   }
 
-  const s = new Base(new Chunked());
-  s.on('data', (data) => {
-    console.log(data.toString(), data[0]);
-  });
-  s.on('error', (err) => {
-    console.log('fuck!!!', { err });
-  });
-  s.write('Hello');
-  s.write('World');
-  s.write('error');
-  s.write('Yo');
-  s.end();
-  //s.destroy();
+  // eslint-disable-next-line no-unused-vars
+  const main = () => {
+    const s = new Base(new Acc({ objectMode: true }));
+    s.on('data', (data) => {
+      console.log(data.toString(), data[0]);
+    });
+    s.on('error', (err) => {
+      console.log('fuck!!!', { err });
+    });
+    s.write('Hello');
+    s.write('World');
+    s.write('error');
+    s.write('Yo');
+    s.end();
+    //s.destroy();
+  };
+  main();
+
+  //const s = 'Hello';
+  //const buf = Buffer.from(s);
+  //console.log({ buf, s: buf.toString() });
+  //console.log(buf.indexOf('fllo'), Buffer.isBuffer(buf));
 });
