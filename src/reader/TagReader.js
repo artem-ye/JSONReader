@@ -7,28 +7,26 @@ class TagReader {
   #chunkOffset = 0;
   #buffer = '';
   #search = null;
-  #handler = null;
+  #feed = null;
   #onDone = null;
   #onData = null;
 
   constructor({ openBracket, closeBracket }) {
     this.#search = new SearchEngine({ openBracket, closeBracket });
-    this.#handler = this.#findStart;
+    this.#feed = this.#findStart;
   }
 
   feed(chunk, onData, onDone) {
-    this.#chunk = chunk;
+    this.#chunk = chunk.toString();
     this.#chunkOffset = 0;
-    this.#onData = onData;
-    this.#onDone = onDone;
-    this.#handler();
+    this.#setCallbacks(onData, onDone);
+    this.#feed();
   }
   reset() {
     this.#buffer = '';
-    this.#onData = null;
-    this.#onDone = null;
+    this.#setCallbacks(null, null);
     this.#search.reset();
-    this.#handler = this.#findStart;
+    this.#feed = this.#findStart;
   }
 
   #findStart() {
@@ -60,12 +58,15 @@ class TagReader {
 
   #done(error) {
     this.#onDone(error);
-    this.#onData = null;
-    this.#onDone = null;
+    this.#setCallbacks(null, null);
   }
   #next(handler) {
-    this.#handler = handler;
-    this.#handler();
+    this.#feed = handler;
+    this.#feed();
+  }
+  #setCallbacks(onData, onDone) {
+    this.#onData = onData;
+    this.#onDone = onDone;
   }
 }
 
