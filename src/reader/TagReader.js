@@ -17,7 +17,7 @@ class TagReader {
   }
 
   feed(chunk, onData, onDone) {
-    this.#chunk = chunk;
+    this.#chunk = chunk.toString();
     this.#chunkOffset = 0;
     this.#setCallbacks(onData, onDone);
     this.#feed();

@@ -8,6 +8,10 @@ const { deserialize, NaiveQueue } = require('./utils.js');
 class Accumulative extends Transform {
   #buffer = [];
 
+  constructor(opts) {
+    super({ ...opts, objectMode: true });
+  }
+
   _transform(chunk, encoding, cb) {
     this.#buffer.push(chunk);
     cb(null);
@@ -29,9 +33,10 @@ class Chunked extends Transform {
   #reader = null;
   #parseQueue = null;
 
-  constructor(...args) {
-    super(...args);
-    this.#reader = new TagReader({ openBracket: '{', closeBracket: '}' });
+  constructor(opts) {
+    super({ ...opts, objectMode: true });
+    const { openBracket = '{', closeBracket = '}' } = opts;
+    this.#reader = new TagReader({ openBracket, closeBracket });
     this.#parseQueue = new ParseQueue();
   }
 
