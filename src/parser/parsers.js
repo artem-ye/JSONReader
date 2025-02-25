@@ -45,13 +45,13 @@ class Chunked extends Transform {
     callback(null);
   }
 
-  _transform(chunk, encoding, cb) {
+  _transform(chunk, encoding, callback) {
     let pending = true;
     const end = (err) => {
       if (!pending) return;
       pending = false;
       if (err) this.reset();
-      cb(err);
+      callback(err);
     };
 
     const queue = this.#parseQueue;
