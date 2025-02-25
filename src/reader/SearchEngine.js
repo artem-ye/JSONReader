@@ -2,15 +2,16 @@
 
 const { BracketsCollector } = require('./BracketsCollector.js');
 
-// RegExp utils
+// RegExp factory
 const esc = (s) => `\\${s}`;
-const withLastIndex = (r, lastIndex) => ((r.lastIndex = lastIndex), r);
-
 const toOpenBracketRegExp = (openBracket) => {
-  return new RegExp(`(?<!\\\\)${esc(openBracket)}`, 'g');
+  const escOpenBracket = esc(openBracket);
+  return new RegExp(`(?<!\\\\)${escOpenBracket}`, 'g');
 };
 const toBracketRegExp = (openBracket, closeBracket) => {
-  return new RegExp(`(?<!\\\\)[${esc(openBracket)}${esc(closeBracket)}]`, 'g');
+  const escOpenBracket = esc(openBracket);
+  const escCloseBracket = esc(closeBracket);
+  return new RegExp(`(?<!\\\\)[${escOpenBracket}${escCloseBracket}]`, 'g');
 };
 
 class SearchEngine {
@@ -28,7 +29,9 @@ class SearchEngine {
   }
 
   findOpenTag(chunk, offset) {
-    const re = withLastIndex(this.#openBracketRe, offset);
+    const re = this.#openBracketRe;
+    re.lastIndex = offset;
+
     const { 0: match } = re.exec(chunk) || {};
     let lastIndex = undefined;
     let error = null;
@@ -42,7 +45,9 @@ class SearchEngine {
   }
 
   findCloseTag(chunk, offset) {
-    const re = withLastIndex(this.#bracketRe, offset);
+    const re = this.#bracketRe;
+    re.lastIndex = offset;
+
     let reRes = null;
     let lastIndex = undefined;
     let error = null;
