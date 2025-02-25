@@ -10,10 +10,11 @@ class BracketsCollector {
     this.#brackets = { openBracket, closeBracket };
   }
 
-  collect(data) {
-    if (data === this.#brackets.openBracket) this.#increase();
-    else if (data === this.#brackets.closeBracket) this.#decrease();
-    else this.#fail(`Unexpected bracket ${data}`);
+  collect(bracket) {
+    if (bracket === this.#brackets.openBracket) this.#increase();
+    else if (bracket === this.#brackets.closeBracket) this.#decrease();
+    else this.#fail(`Unexpected bracket ${bracket}`);
+
     return {
       done: this.#done,
       error: this.#error,
