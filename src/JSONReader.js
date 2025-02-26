@@ -34,18 +34,23 @@ class JSONReader extends Transform {
       chunk,
       this.#chunkedPattern
     );
-
-    parser.write(slice(chunk, offset), encoding, callback);
-    (async () => {
-      for await (const data of parser) this.push(data);
-    })().catch((err) => this.emit('error', err));
-
     this.#parser = parser;
     this.#transform = this.#parse;
+
+    this.#subscribe();
+    this.#transform(slice(chunk, offset), encoding, callback);
   }
 
   #parse(chunk, encoding, done) {
     this.#parser.write(chunk, encoding, done);
+  }
+
+  async #subscribe() {
+    try {
+      for await (const data of this.#parser) this.push(data);
+    } catch (err) {
+      this.emit('error', err);
+    }
   }
 }
 
