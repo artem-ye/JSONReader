@@ -13,7 +13,7 @@ class JSONReader extends Transform {
   // chunkedPattern option.
   // For example, use this:
   //  new JSONReader({chunkedPattern: '{results:{data:['})
-  // to parse array entries, from 'data' property
+  // to parse array entries, from 'data' property in chunked mode
   constructor(options) {
     super({ ...options, objectMode: true });
     this.#transform = this.#selectParser;
@@ -30,51 +30,47 @@ class JSONReader extends Transform {
   }
 
   #selectParser(chunk, encoding, callback) {
-    const { error, parser, offset } = ParserFactory.fromChunk(
+    const { parser, offset } = ParserFactory.fromChunk(
       chunk,
       this.#chunkedPattern
     );
-    if (error) {
-      callback(error);
-    } else {
-      parser.write(offset ? slice(chunk, offset) : chunk, encoding, callback);
-      (async () => {
-        for await (const data of parser) this.push(data);
-      })().catch((err) => this.emit('error', err));
 
-      this.#parser = parser;
-      this.#transform = this.#passThrough;
-    }
+    parser.write(slice(chunk, offset), encoding, callback);
+    (async () => {
+      for await (const data of parser) this.push(data);
+    })().catch((err) => this.emit('error', err));
+
+    this.#parser = parser;
+    this.#transform = this.#parse;
   }
 
-  #passThrough(chunk, encoding, done) {
+  #parse(chunk, encoding, done) {
     this.#parser.write(chunk, encoding, done);
   }
 }
 
 class ParserFactory {
-  static fromChunk(chunk, chunkedPattern = '[') {
+  static fromChunk(chunk, chunkedPattern) {
     let parser = null;
     let offset = 0;
-    let error = null;
 
     const head = substring(chunk, 0, chunkedPattern.length + 1);
     if (head.startsWith(chunkedPattern)) {
-      const { error: err, brackets } = ParserFactory.#bracketsPair(head.at(-1));
-      if (err) {
-        error = new Error(`Unsupported open bracket at head of chunk: ${head}`);
-      } else {
+      const { error, brackets } = ParserFactory.#recognizeBrackets(head.at(-1));
+      if (!error) {
         parser = new ParseStream.Chunked(brackets);
         offset = chunkedPattern.length;
       }
-    } else {
+    }
+
+    if (parser === null) {
       parser = new ParseStream.Accumulative();
       offset = 0;
     }
-    return { error, parser, offset };
+    return { parser, offset };
   }
 
-  static #bracketsPair(openBracket) {
+  static #recognizeBrackets(openBracket) {
     let closeBracket = undefined;
     let error = false;
     if (openBracket === '[') closeBracket = ']';
