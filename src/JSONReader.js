@@ -6,11 +6,11 @@ const { substring, slice } = require('./utils.js');
 const { Maybe } = require('./lib/Maybe.js');
 
 const parserFromChunk = (chunk, chunkedPattern) => {
-  const chunkedParser = (brackets) => ({
+  const createChunked = (brackets) => ({
     parser: new ParseStream.Chunked(brackets),
     offset: chunkedPattern.length,
   });
-  const accumulativeParser = () => ({
+  const createAccumulative = () => ({
     parser: new ParseStream.Accumulative(),
     offset: 0,
   });
@@ -26,9 +26,9 @@ const parserFromChunk = (chunk, chunkedPattern) => {
     .map((v) => (v.startsWith(chunkedPattern) ? v : null))
     .map((v) => v.at(-1))
     .map(recognizeBrackets)
-    .map(chunkedParser);
+    .map(createChunked);
 
-  return maybeChunked.isJust ? maybeChunked.join() : accumulativeParser();
+  return maybeChunked.isJust ? maybeChunked.join() : createAccumulative();
 };
 
 class JSONReader extends Transform {
