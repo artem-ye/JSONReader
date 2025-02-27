@@ -3,6 +3,29 @@
 const { Transform } = require('node:stream');
 const ParseStream = require('./parser/parsers.js');
 const { substring, slice } = require('./utils.js');
+const { Maybe } = require('./lib/Maybe.js');
+
+const parserFromChunk = (chunk, chunkedPattern) => {
+  const recognizeBrackets = (openBracket) => {
+    const pair = { '{': '}', '[': ']' };
+    let closeBracket = pair[openBracket];
+    return closeBracket === undefined ? null : { openBracket, closeBracket };
+  };
+
+  const head = substring(chunk, 0, chunkedPattern.length + 1);
+  const chunked = Maybe.of(head)
+    .map((v) => (v.startsWith(chunkedPattern) ? v : null))
+    .map((v) => v.at(-1))
+    .map(recognizeBrackets)
+    .map((brackets) => ({
+      parser: new ParseStream.Chunked(brackets),
+      offset: chunkedPattern.length,
+    }));
+
+  return chunked.isJust
+    ? chunked.join()
+    : { parser: new ParseStream.Accumulative(), offset: 0 };
+};
 
 class JSONReader extends Transform {
   #transform = null;
@@ -30,10 +53,7 @@ class JSONReader extends Transform {
   }
 
   #selectParser(chunk, encoding, callback) {
-    const { parser, offset } = ParserFactory.fromChunk(
-      chunk,
-      this.#chunkedPattern
-    );
+    const { parser, offset } = parserFromChunk(chunk, this.#chunkedPattern);
     this.#parser = parser;
     this.#transform = this.#parse;
 
@@ -51,37 +71,6 @@ class JSONReader extends Transform {
     } catch (err) {
       this.emit('error', err);
     }
-  }
-}
-
-class ParserFactory {
-  static fromChunk(chunk, chunkedPattern) {
-    let parser = null;
-    let offset = 0;
-
-    const head = substring(chunk, 0, chunkedPattern.length + 1);
-    if (head.startsWith(chunkedPattern)) {
-      const { error, brackets } = ParserFactory.#recognizeBrackets(head.at(-1));
-      if (!error) {
-        parser = new ParseStream.Chunked(brackets);
-        offset = chunkedPattern.length;
-      }
-    }
-
-    if (parser === null) {
-      parser = new ParseStream.Accumulative();
-      offset = 0;
-    }
-    return { parser, offset };
-  }
-
-  static #recognizeBrackets(openBracket) {
-    let closeBracket = undefined;
-    let error = false;
-    if (openBracket === '[') closeBracket = ']';
-    else if (openBracket === '{') closeBracket = '}';
-    else error = true;
-    return { error, brackets: { openBracket, closeBracket } };
   }
 }
 
