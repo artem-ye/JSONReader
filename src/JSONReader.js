@@ -8,6 +8,7 @@ class JSONReader extends Transform {
   #transform = null;
   #parser = null;
   #parserSelector = null;
+  #listener = (data) => this.push(data);
 
   // Be free to use more complex constructions in
   // chunkedPattern option.
@@ -26,7 +27,7 @@ class JSONReader extends Transform {
 
   _flush(callback) {
     this.#parser.end(callback);
-    this.#transform = this.#selectParser;
+    this.#reset();
   }
 
   #selectParser(chunk, encoding, callback) {
@@ -34,7 +35,7 @@ class JSONReader extends Transform {
     this.#parser = parser;
     this.#transform = this.#parse;
 
-    this.#listen();
+    this.#subscribe();
     parser.write(slice(chunk, offset), encoding, callback);
   }
 
@@ -42,12 +43,21 @@ class JSONReader extends Transform {
     this.#parser.write(chunk, encoding, done);
   }
 
-  async #listen() {
-    try {
-      for await (const data of this.#parser) this.push(data);
-    } catch (err) {
-      this.emit('error', err);
-    }
+  #subscribe() {
+    this.#parser.on('data', (data) => this.#listener(data));
+    this.#parser.once('end', () => this.#unsubscribe());
+    this.#parser.once('error', () => {
+      this.#unsubscribe();
+      this.#reset();
+    });
+  }
+
+  #unsubscribe() {
+    this.#parser.off('data', this.#listener);
+  }
+
+  #reset() {
+    this.#transform = this.#selectParser;
   }
 }
 
