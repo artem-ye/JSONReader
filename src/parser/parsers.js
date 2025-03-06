@@ -3,7 +3,7 @@
 const { Buffer } = require('node:buffer');
 const { Transform } = require('node:stream');
 const { TagReader } = require('../reader/TagReader.js');
-const { Deserializer, deserialize } = require('./Deserializer.js');
+const { Deserializer, deserialize } = require('../lib/Deserializer.js');
 
 class Accumulative extends Transform {
   #buffer = [];
@@ -60,10 +60,7 @@ class Chunked extends Transform {
 
     const parser = this.#parser;
     parser.onDone = (err) => end(err);
-    parser.onData = (data) => {
-      this.push(data);
-      processing--;
-    };
+    parser.onData = (data) => (this.push(data), processing--);
 
     const data = (err, res) => {
       if (err) return void end(err);
@@ -75,7 +72,7 @@ class Chunked extends Transform {
 
   reset() {
     this.#reader.reset();
-    // TODO: clear parser queue on error
+    this.#parser.cancel();
   }
 }
 

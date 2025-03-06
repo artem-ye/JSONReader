@@ -15,18 +15,22 @@ class AsyncQueue {
     this.#executor = executor;
     this.#events = {
       drain: () => {},
-      error: () => {},
+      error: (e) => {
+        throw e;
+      },
     };
   }
 
   push(payload) {
     const { promise, resolve } = Promise.withResolvers();
+
     if (this.#running < this.#concurrency) {
       this.#running++;
       this.#execute(payload, resolve);
     } else {
       this.#enqueue(payload, resolve);
     }
+
     return promise;
   }
 
@@ -35,7 +39,6 @@ class AsyncQueue {
       if (!this.#canceled) await this.#executor(payload);
       resolve(null);
     } catch (err) {
-      // TODO: throw err if listener not set
       this.#events.error(err);
       resolve(err);
     }

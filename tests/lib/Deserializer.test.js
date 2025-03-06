@@ -3,7 +3,7 @@
 const assert = require('node:assert');
 const { describe, it } = require('node:test');
 
-const { Deserializer } = require('../../src/parser/Deserializer.js');
+const { Deserializer } = require('../../src/lib/Deserializer.js');
 
 describe('Deserializer', () => {
   it('should works', async () => {

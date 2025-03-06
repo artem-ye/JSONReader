@@ -1,6 +1,6 @@
 'use strict';
 
-const { AsyncQueue } = require('../lib/AsyncQueue.js');
+const { AsyncQueue } = require('./AsyncQueue.js');
 
 const deserialize = (data) => {
   const parse = (resolve, reject) => {
