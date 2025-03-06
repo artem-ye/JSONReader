@@ -1,8 +1,8 @@
 'use strict';
 
 const { Transform } = require('node:stream');
-const Parser = require('./parser/parsers.js');
-const { substring, slice } = require('./utils.js');
+const Parser = require('./parser/Parsers.js');
+const { substring, slice } = require('./lib/stringUtils.js');
 
 class JSONReader extends Transform {
   #transform = null;

@@ -3,7 +3,7 @@
 const { Buffer } = require('node:buffer');
 const { Transform } = require('node:stream');
 const { TagReader } = require('../reader/TagReader.js');
-const { deserialize, NaiveQueue } = require('./utils.js');
+const { Deserializer, deserialize } = require('./Deserializer.js');
 
 class Accumulative extends Transform {
   #buffer = [];
@@ -31,13 +31,13 @@ class Accumulative extends Transform {
 
 class Chunked extends Transform {
   #reader = null;
-  #parseQueue = null;
+  #parser = null;
 
   constructor(opts) {
     super({ ...opts, objectMode: true });
     const { openBracket = '{', closeBracket = '}' } = opts;
     this.#reader = new TagReader({ openBracket, closeBracket });
-    this.#parseQueue = new ParseQueue();
+    this.#parser = new Deserializer({ concurrency: 15 });
   }
 
   _flush(callback) {
@@ -46,44 +46,36 @@ class Chunked extends Transform {
   }
 
   _transform(chunk, encoding, callback) {
+    let processing = 0;
     let pending = true;
+
     const end = (err) => {
       if (!pending) return;
-      pending = false;
-      if (err) this.reset();
-      callback(err);
+      if (err || processing === 0) {
+        pending = false;
+        if (err) this.reset();
+        callback(err);
+      }
     };
 
-    const queue = this.#parseQueue;
-    const parse = () => void (pending && queue.dequeue(end));
-    const receive = (data) => void (pending && this.push(data));
+    const parser = this.#parser;
+    parser.onDone = (err) => end(err);
+    parser.onData = (data) => {
+      this.push(data);
+      processing--;
+    };
 
-    const onDone = (err) => (err ? end(err) : parse());
-    const onData = (err, res) => (err ? end(err) : queue.enqueue(res, receive));
-    this.#reader.feed(chunk, onData, onDone);
+    const data = (err, res) => {
+      if (err) return void end(err);
+      processing++;
+      parser.parse(res);
+    };
+    this.#reader.feed(chunk, data, end);
   }
 
   reset() {
     this.#reader.reset();
-    this.#parseQueue.clear();
-  }
-}
-
-class ParseQueue {
-  constructor() {
-    this.queue = NaiveQueue();
-  }
-  enqueue(data, resolve) {
-    this.queue.enqueue(deserialize(data).then(resolve));
-  }
-  dequeue(cb) {
-    this.queue
-      .dequeue()
-      .then(() => cb(null), cb)
-      .finally(() => this.clear());
-  }
-  clear() {
-    this.queue.clear();
+    // TODO: clear parser queue on error
   }
 }
 

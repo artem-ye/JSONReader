@@ -2,7 +2,8 @@
 
 const assert = require('node:assert');
 const { describe, it } = require('node:test');
-const { substring, slice } = require('../src/utils');
+
+const { substring, slice } = require('../../src/lib/stringUtils.js');
 const { Buffer } = require('node:buffer');
 
 describe('String utils', () => {

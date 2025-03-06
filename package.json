@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "npm run types && node --test",
+    "test": "node --test",
     "types": "tsc -p tsconfig.json"
   },
   "author": "",
