@@ -15,10 +15,11 @@ class JSONReader extends Transform {
   // For example, use this:
   //  new JSONReader({chunkedPattern: '{results:{data:['})
   // to parse array entries, from 'data' property in chunked mode
-  constructor(options) {
-    super({ ...options, objectMode: true });
+  constructor(options = {}) {
+    const { chunkedPattern = '[', concurrency = 15, ...rest } = options;
+    super({ ...rest, objectMode: true });
     this.#transform = this.#selectParser;
-    this.#parserSelector = new ParserSelector(options?.chunkedPattern || '[');
+    this.#parserSelector = new ParserSelector({ concurrency, chunkedPattern });
   }
 
   _transform(data, encoding, callback) {
@@ -62,8 +63,9 @@ class JSONReader extends Transform {
 }
 
 class ParserSelector {
-  constructor(chunkedPattern) {
+  constructor({ chunkedPattern, concurrency }) {
     this.chunkedPattern = chunkedPattern;
+    this.concurrency = concurrency;
   }
 
   fromChunk(chunk) {
@@ -79,12 +81,13 @@ class ParserSelector {
 
   #chunked(chunk) {
     const chunkedPattern = this.chunkedPattern;
+    const concurrency = this.concurrency;
     let parser = null;
 
     const head = substring(chunk, 0, chunkedPattern.length + 1);
     if (head.startsWith(chunkedPattern)) {
       const brackets = this.#recognizeBrackets(head.at(-1));
-      if (brackets) parser = new Parser.Chunked(brackets);
+      if (brackets) parser = new Parser.Chunked({ brackets, concurrency });
     }
 
     return parser ? { parser, offset: chunkedPattern.length } : null;

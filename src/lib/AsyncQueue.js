@@ -1,8 +1,9 @@
 'use strict';
 
-class AsyncQueue {
+const { EventEmitter } = require('node:events');
+
+class AsyncQueue extends EventEmitter {
   #executor = async () => {};
-  #events = null;
   #concurrency = 0;
   #running = 0;
   #queue = [];
@@ -10,45 +11,39 @@ class AsyncQueue {
   #dequeueTimer = null;
 
   constructor(opts = {}) {
+    super();
     const { concurrency, executor } = opts;
-    this.#concurrency = concurrency || 25;
+    this.#concurrency = concurrency;
     this.#executor = executor;
-    this.#events = {
-      drain: () => {},
-      error: (e) => {
-        throw e;
-      },
-    };
   }
 
   push(payload) {
-    const { promise, resolve } = Promise.withResolvers();
+    const { promise, resolve, reject } = Promise.withResolvers();
 
     if (this.#running < this.#concurrency) {
       this.#running++;
-      this.#execute(payload, resolve);
+      this.#execute(payload, resolve, reject);
     } else {
-      this.#enqueue(payload, resolve);
+      this.#enqueue(payload, resolve, reject);
     }
 
     return promise;
   }
 
-  async #execute(payload, resolve) {
+  async #execute(payload, resolve, reject) {
     try {
       if (!this.#canceled) await this.#executor(payload);
       resolve(null);
     } catch (err) {
-      this.#events.error(err);
-      resolve(err);
+      this.#error(err, resolve, reject);
     }
 
     this.#running--;
     this.#dequeue();
   }
 
-  #enqueue(payload, resolve) {
-    this.#queue.push({ payload, resolve });
+  #enqueue(payload, resolve, reject) {
+    this.#queue.push({ payload, resolve, reject });
   }
 
   #dequeue() {
@@ -61,15 +56,15 @@ class AsyncQueue {
     }
 
     if (this.#queue.length === 0 && this.#running === 0) {
-      if (!this.#canceled) this.#events.drain();
+      if (!this.#canceled) this.#drain();
       this.#canceled = false;
     }
   }
 
   #dequeueTask() {
     const dequeue = () => {
-      const { payload, resolve } = this.#queue.shift();
-      this.#execute(payload, resolve);
+      const { payload, resolve, reject } = this.#queue.shift();
+      this.#execute(payload, resolve, reject);
     };
 
     const task = async () => {
@@ -83,23 +78,26 @@ class AsyncQueue {
     return task;
   }
 
+  #drain() {
+    this.emit('drain', null);
+  }
+
+  #error(err, resolve, reject) {
+    if (this.listenerCount('error') !== 0) {
+      resolve(err);
+      this.emit('error', err);
+    } else {
+      reject(err);
+    }
+  }
+
   cancel() {
     if (this.#queue.length > 0 || this.#running > 0) this.#canceled = true;
-  }
-
-  on(event, handler) {
-    this.#events[event] = handler;
-  }
-
-  off(event) {
-    this.#events[event] = () => {};
   }
 
   _state() {
     return {
       executor: this.#executor,
-      drain: this.#events.drain,
-      error: this.#events.error,
       concurrency: this.#concurrency,
       running: this.#running,
       queue: this.#queue,

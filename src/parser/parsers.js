@@ -32,17 +32,17 @@ class Accumulative extends Transform {
 class Chunked extends Transform {
   #reader = null;
   #parser = null;
+  #parseHandlers = {
+    done: null,
+    data: null,
+  };
 
-  constructor(opts) {
-    super({ ...opts, objectMode: true });
-    const { openBracket = '{', closeBracket = '}' } = opts;
-    this.#reader = new TagReader({ openBracket, closeBracket });
-    this.#parser = new Deserializer({ concurrency: 15 });
-  }
-
-  _flush(callback) {
-    this.reset();
-    callback(null);
+  constructor({ concurrency, brackets }) {
+    super({ objectMode: true });
+    this.#reader = new TagReader(brackets);
+    this.#parser = new Deserializer({ concurrency });
+    this.#parser.on('data', (data) => this.#parseHandlers.data(data));
+    this.#parser.on('done', (err) => this.#parseHandlers.done(err));
   }
 
   _transform(chunk, encoding, callback) {
@@ -58,19 +58,27 @@ class Chunked extends Transform {
       }
     };
 
-    const parser = this.#parser;
-    parser.onDone = (err) => end(err);
-    parser.onData = (data) => (this.push(data), processing--);
-
-    const data = (err, res) => {
-      if (err) return void end(err);
-      processing++;
-      parser.parse(res);
+    const parse = (err, res) => {
+      if (err) end(err);
+      else {
+        processing++;
+        this.#parser.push(res);
+      }
     };
-    this.#reader.feed(chunk, data, end);
+
+    this.#parseHandlers.done = (err) => end(err);
+    this.#parseHandlers.data = (data) => (this.push(data), processing--);
+    this.#reader.feed(chunk, parse, end);
+  }
+
+  _flush(callback) {
+    this.reset();
+    callback(null);
   }
 
   reset() {
+    this.#parseHandlers.done = null;
+    this.#parseHandlers.data = null;
     this.#reader.reset();
     this.#parser.cancel();
   }

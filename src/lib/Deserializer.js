@@ -1,6 +1,7 @@
 'use strict';
 
 const { AsyncQueue } = require('./AsyncQueue.js');
+const { EventEmitter } = require('node:events');
 
 const deserialize = (data) => {
   const parse = (resolve, reject) => {
@@ -15,23 +16,24 @@ const deserialize = (data) => {
   return new Promise(parseAsync);
 };
 
-class Deserializer {
+class Deserializer extends EventEmitter {
   #queue = null;
   #errored = false;
   lastError = null;
-  onData = null;
-  onDone = null;
 
   constructor({ concurrency }) {
-    const executor = async (data) =>
-      deserialize(data).then((res) => !this.#errored && this.#data(res));
+    super();
+
+    const executor = async (data) => {
+      return deserialize(data).then((res) => !this.#errored && this.#data(res));
+    };
 
     this.#queue = new AsyncQueue({ concurrency, executor });
     this.#queue.on('error', (e) => this.#error(e));
     this.#queue.on('drain', () => this.#drain());
   }
 
-  parse(data) {
+  push(data) {
     this.#queue.push(data);
   }
 
@@ -52,15 +54,15 @@ class Deserializer {
   }
 
   #drain() {
-    this.#done();
+    this.#done(null);
   }
 
   #data(data) {
-    this.onData(data);
+    this.emit('data', data);
   }
 
   #done(err) {
-    this.onDone(err);
+    this.emit('done', err);
   }
 }
 

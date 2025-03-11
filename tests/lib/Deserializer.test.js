@@ -14,13 +14,13 @@ describe('Deserializer', () => {
     const results = [];
     let error = null;
 
-    parser.onData = (data) => results.push(data);
-    parser.onDone = (err) => {
+    parser.on('data', (data) => results.push(data));
+    parser.on('done', (err) => {
       error = err;
       donePromise.resolve(err);
-    };
+    });
 
-    parser.parse(JSON.stringify({ a: 12 }));
+    parser.push(JSON.stringify({ a: 12 }));
 
     await donePromise.promise;
     assert.equal(results.length, 1);
@@ -35,19 +35,19 @@ describe('Deserializer', () => {
     const results = [];
     let errorCount = null;
 
-    parser.onData = (data) => results.push(data);
-    parser.onDone = (err) => {
+    parser.on('data', (data) => results.push(data));
+    parser.on('done', (err) => {
       errorCount++;
       donePromise.resolve(err);
-    };
+    });
 
     const expectedResults = [{ a: 1 }, { b: 2 }];
 
-    parser.parse(JSON.stringify(expectedResults[0]));
-    parser.parse(JSON.stringify(expectedResults[1]));
-    parser.parse('error 1');
-    parser.parse(JSON.stringify({ unexpected: 'result' }));
-    parser.parse('error 2');
+    parser.push(JSON.stringify(expectedResults[0]));
+    parser.push(JSON.stringify(expectedResults[1]));
+    parser.push('error 1');
+    parser.push(JSON.stringify({ unexpected: 'result' }));
+    parser.push('error 2');
     await donePromise.promise;
 
     assert.equal(results.length, expectedResults.length);
@@ -64,19 +64,19 @@ describe('Deserializer', () => {
     const results = [];
     let errorCount = null;
 
-    parser.onData = (data) => results.push(data);
-    parser.onDone = (err) => {
+    parser.on('data', (data) => results.push(data));
+    parser.on('done', (err) => {
       errorCount++;
       donePromise.resolve(err);
-    };
+    });
 
     const expectedResults = [{ a: 1 }, { b: 2 }];
 
-    parser.parse(JSON.stringify(expectedResults[0]));
-    parser.parse(JSON.stringify(expectedResults[1]));
-    parser.parse('error 1');
-    parser.parse(JSON.stringify({ unexpected: 'result' }));
-    parser.parse('error 2');
+    parser.push(JSON.stringify(expectedResults[0]));
+    parser.push(JSON.stringify(expectedResults[1]));
+    parser.push('error 1');
+    parser.push(JSON.stringify({ unexpected: 'result' }));
+    parser.push('error 2');
     await donePromise.promise;
 
     assert.equal(results.length, expectedResults.length);
