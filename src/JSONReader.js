@@ -5,10 +5,9 @@ const Parser = require('./parser/Parsers.js');
 const { substring, slice } = require('./lib/stringUtils.js');
 
 class JSONReader extends Transform {
-  #transform = null;
+  #transform = this.#selectParser;
   #parser = null;
   #parserSelector = null;
-  #listener = (data) => this.push(data);
 
   // Be free to use more complex constructions in
   // chunkedPattern option.
@@ -18,7 +17,6 @@ class JSONReader extends Transform {
   constructor(options = {}) {
     const { chunkedPattern = '[', concurrency = 15, ...rest } = options;
     super({ ...rest, objectMode: true });
-    this.#transform = this.#selectParser;
     this.#parserSelector = new ParserSelector({ concurrency, chunkedPattern });
   }
 
@@ -26,39 +24,22 @@ class JSONReader extends Transform {
     this.#transform(data, encoding, callback);
   }
 
-  _flush(callback) {
-    this.#parser.end(callback);
-    this.#reset();
-  }
-
   #selectParser(chunk, encoding, callback) {
     const { parser, offset } = this.#parserSelector.fromChunk(chunk);
+    parser.on('data', (data) => this.push(data));
+    parser.once('error', (err) => this.emit(err));
+
     this.#parser = parser;
     this.#transform = this.#parse;
-
-    this.#subscribe();
-    parser.write(slice(chunk, offset), encoding, callback);
+    this.#transform(slice(chunk, offset), encoding, callback);
   }
 
   #parse(chunk, encoding, done) {
     this.#parser.write(chunk, encoding, done);
   }
 
-  #subscribe() {
-    this.#parser.on('data', (data) => this.#listener(data));
-    this.#parser.once('end', () => this.#unsubscribe());
-    this.#parser.once('error', () => {
-      this.#unsubscribe();
-      this.#reset();
-    });
-  }
-
-  #unsubscribe() {
-    this.#parser.off('data', this.#listener);
-  }
-
-  #reset() {
-    this.#transform = this.#selectParser;
+  _flush(callback) {
+    this.#parser.end(callback);
   }
 }
 
